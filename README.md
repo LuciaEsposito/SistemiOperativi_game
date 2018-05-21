@@ -5,12 +5,12 @@
    SERVER SIDE:
      - the server operates in both TCP and UDP
    
-        1) TCP part
+        TCP part:
           - registerning a new client when it comes online
           - deregistering a client when it goes offline
           - sending the map, when the client requests it
           
-        2) UDP part
+        UDP part:
           - the server receives preiodic upates from the client
             in the form of <timestamp, translational acceleration, rotational acceleration>
 	          Each "epoch" it integrates the messages from the clients,
@@ -21,13 +21,11 @@
 
    CLIENT SIDE:
      - the client does the following
-     
-      - connects to the server (TCP)
-      - requests the map, and gets an ID from the server (TCP)
-      - receives updates on the state from the server
+          - connects to the server (TCP)
+     	   - requests the map, and gets an ID from the server (TCP)
+      	  - receives updates on the state from the server
 
      - periodically
-     
-      - updates the viewer (provided)
-      - reads either keyboard or joystick
-      - sends the <UDP> packet of the control to the server
+          - updates the viewer (provided)
+          - reads either keyboard or joystick
+          - sends the UDP packet of the control to the server
