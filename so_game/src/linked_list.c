@@ -1,5 +1,7 @@
 #include "linked_list.h"
 #include <assert.h>
+#include <stddef.h>
+#include <stdlib.h>
 
 void List_init(ListHead* head) {
   head->first=0;
@@ -77,3 +79,36 @@ ListItem* List_detach(ListHead* head, ListItem* item) {
   item->next=item->prev=0;
   return item;
 }
+
+// creates a list item with a socket
+ListItem* ListItem_init(int sock){
+  ListItem* item = (ListItem*)malloc(sizeof(ListItem));
+  item->info = sock;
+  item->prev = NULL;
+  item->next = NULL;
+  return item; // new
+}
+
+// add a list item to a list (head)
+int insertSockFD(ListHead* head, int sock){
+  ListItem* item = ListItem_init(sock);
+  ListItem* result = List_insert(head, head->last, item);
+  return result->info;
+}
+
+
+// returns the list item containing the specified socket
+ListItem* getSockFD(ListHead* head, int sock){
+  ListItem* item = head->first;
+  while(item){
+    if(item->info == sock) return item;
+    item=item->next;
+  }
+  return NULL;
+}
+
+void removeSockFD(ListHead* head, int sock){
+  ListItem* to_remove = getSockFD(head,sock);
+  List_detach(head, to_remove);
+}
+

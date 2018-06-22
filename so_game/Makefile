@@ -1,31 +1,38 @@
-CCOPTS= -Wall -g -std=gnu99 -Wstrict-prototypes
+CFLAGS= -Wall -g -std=gnu99 -Wstrict-prototypes
 LIBS= -lglut -lGLU -lGL -lm -lpthread
 CC=gcc
 AR=ar
 
 
 BINS=libso_game.a\
-     so_game\
-     test_packets_serialization 
+     server\
+     client
 
-OBJS = vec3.o\
-       linked_list.o\
-       surface.o\
-       image.o\
-       vehicle.o\
-       world.o\
-       world_viewer.o\
-       so_game_protocol.o\
+OBJS = src/vec3.o\
+       src/linked_list.o\
+       src/surface.o\
+       src/image.o\
+       src/vehicle.o\
+       src/world.o\
+       src/world_viewer.o\
+       src/so_game_protocol.o\
+       src/TCP_interface.o\
+       src/messages.o\
+       src/server_threads.o\
 
 HEADERS=helpers.h\
-	image.h\
-	linked_list.h\
-	so_game_protocol.h\
-	surface.h\
-	vec3.h\
-	vehicle.h\
-	world.h\
-	world_viewer.h\
+	src/image.h\
+	src/linked_list.h\
+	src/so_game_protocol.h\
+	src/surface.h\
+	src/vec3.h\
+	src/vehicle.h\
+	src/world.h\
+	src/world_viewer.h\
+	src/TCP_interface.h\
+	src/messages.h\
+	src/server_threads.h\
+
 
 %.o:	%.c $(HEADERS)
 	$(CC) $(CCOPTS) -c -o $@  $<
@@ -35,15 +42,22 @@ HEADERS=helpers.h\
 
 all:	$(BINS) 
 
+
 libso_game.a: $(OBJS) 
-	$(AR) -rcs $@ $^
+	$(AR) -rcs ./bin/$@ $^
 	$(RM) $(OBJS)
+	
+server: ./src/so_game_server.c ./bin/libso_game.a
+	$(CC) $(CCOPTS) -Ofast -o ./bin/$@ $^ $(LIBS)
 
-so_game: so_game.c libso_game.a 
-	$(CC) $(CCOPTS) -Ofast -o $@ $^ $(LIBS)
+client: ./src/so_game_client.c ./bin/libso_game.a
+	$(CC) $(CCOPTS) -Ofast -o ./bin/$@ $^ $(LIBS) 
 
-test_packets_serialization: test_packets_serialization.c libso_game.a  
-	$(CC) $(CCOPTS) -Ofast -o $@ $^  $(LIBS)
+default_server:
+	./bin/server ./images/arrow-right.ppm ./images/test.pgm ./images/test.ppm
 
-clean:
-	rm -rf *.o *~  $(BINS)
+local_client:
+	./bin/client 127.0.0.1
+
+delete:
+	rm -rf *.o *~  ./bin/* 
