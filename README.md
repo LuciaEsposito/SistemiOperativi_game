@@ -11,7 +11,7 @@
           - sending the map, when the client requests it
           
         UDP part:
-          - the server receives preiodic upates from the client
+          - the server receives periodic upates from the client
             in the form of <timestamp, translational acceleration, rotational acceleration>
 	          Each "epoch" it integrates the messages from the clients,
 	          and sends back a state update
