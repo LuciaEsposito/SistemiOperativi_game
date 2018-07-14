@@ -22,16 +22,27 @@
 #include "messages.h"
 #include "server_threads.h"
 
+pthread_t updater;
 World environment;
 Image* elevation;
 Image* terrain_img;
 Image* player_img;
-struct sockaddr_in* client_addr;    // riutilizzato per connettere il client
-ListHead sockets;       // lista che contiene i socket TCP per i client, memorizzati per essere chiusi dopo
+struct sockaddr_in* client_addr;
+params* updater_params;
+ListHead sockets;
+int socket_UDP;
+addressListHead player_addresses;
+pthread_t players_updater;
 
 void server_shutdown(int s) {
 
 	printf("\nshutting down\n");
+
+	// terminating updater thread
+	printf("\nterminating updater\n");
+	int res = pthread_cancel(updater);
+	/* error check */ if(res != 0) { printf("\nWorld update thread termination failure\n"); exit(EXIT_FAILURE); }
+	close(socket_UDP);
 
 	// closing sockets
 	ListItem* current_socket = sockets.first;
@@ -50,6 +61,7 @@ void server_shutdown(int s) {
 	Image_free(terrain_img);
 	Image_free(player_img);
 	free(client_addr);
+	free(updater_params);
 
 	printf("\nserver closing\n");
 	exit(EXIT_SUCCESS);
@@ -71,7 +83,27 @@ int main(int argc, char **argv) {
 		perror("Non si può gestire SIGINT");
 	}
 
+	// creo socket UDP
+	socket_UDP = socket(AF_INET, SOCK_DGRAM, 0);
+    if (setsockopt(socket_UDP, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int)) < 0){	// (evita l'errore "Address already in use")
+    	printf("setsockopt(SO_REUSEADDR) failed");
+	}
+    if(socket_UDP<0){
+		perror("Errore nella creazione del socket UDP");
+		exit(EXIT_FAILURE);
+	}
 
+	struct sockaddr_in address;
+	(&address)->sin_family = AF_INET;
+	(&address)->sin_port = htons(2001);					// converte in network byte order
+	(&address)->sin_addr.s_addr = htonl(INADDR_ANY);	// converte in network byte order
+
+	// connetto socket_UDP all'inidrizzo del server
+	int res = bind(socket_UDP, (struct sockaddr*) &address, sizeof(address));
+	if(res<0){
+		perror("Errore nel bind del socket UDP");
+		exit(EXIT_FAILURE);
+	}
 
     // preparo l'indirizzo del socket
     struct sockaddr_in TCP_address = {0};       // dichiaro la struttura indirizzo
@@ -84,7 +116,7 @@ int main(int argc, char **argv) {
 	/* error check */ if(TCP_socket < 0) { printf("\nTCP socket initialization failure\n"); exit(EXIT_FAILURE); }
     if (setsockopt(TCP_socket, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int)) < 0)
         error("setsockopt(SO_REUSEADDR) failed");       // configuro il socket per utilizzare lo stesso indirizzo
-	int res = bind(TCP_socket, (struct sockaddr *)&TCP_address, sizeof(struct sockaddr_in)); // lego socket e address
+	res = bind(TCP_socket, (struct sockaddr *)&TCP_address, sizeof(struct sockaddr_in)); // lego socket e address
 	/* error check */ if(res < 0) { printf("\nTCP socket binding failure: %d\n", errno); exit(EXIT_FAILURE); }
 
 	// avvio il socket per accettare connessioni (max 10)
@@ -108,14 +140,20 @@ int main(int argc, char **argv) {
 	// inizializzo la lista di socket TCP
 	List_init(&sockets);
 
-  // // set the callbacks
-  // glutDisplayFunc(display);
-  // glutIdleFunc(idle);
-  // glutSpecialFunc(specialInput);
-  // glutKeyboardFunc(keyPressed);
-  // glutReshapeFunc(reshape);
-  
-  // WorldViewer_init(&viewer, &world, vehicle);
+	// player addresses list
+	addressList_init(&player_addresses);
+
+	// Initialising a new thread to handle the players
+	params* updater_params = (params*)malloc(sizeof(params));
+	updater_params->player_socket = socket_UDP;
+	updater_params->player_ID = -1;
+	updater_params->environment = &environment;
+	updater_params->player_addresses = &player_addresses;
+	res = pthread_create(&updater, NULL, updater_thread, (void*)updater_params);
+	/* error check */ if(res != 0) { printf("\nserver updater thread launch failure\n"); exit(EXIT_FAILURE); }
+	res = pthread_create(&players_updater, NULL, player_updater_thread, (void*)updater_params);
+	/* error check */ if(res != 0) { printf("\nplayers updater thread launch failure\n"); exit(EXIT_FAILURE); }
+	client_addr = calloc(1, sizeof(struct sockaddr_in));
 
 	printf("\nRunning server on port:2000\n");
 

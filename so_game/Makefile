@@ -19,6 +19,8 @@ OBJS = src/vec3.o\
        src/TCP_interface.o\
        src/messages.o\
        src/server_threads.o\
+       src/client_update_functions.o\
+       src/address_list.o\
 
 HEADERS=helpers.h\
 	src/image.h\
@@ -32,6 +34,8 @@ HEADERS=helpers.h\
 	src/TCP_interface.h\
 	src/messages.h\
 	src/server_threads.h\
+	src/client_update_functions.h\
+	src/address_list.h\
 
 
 %.o:	%.c $(HEADERS)

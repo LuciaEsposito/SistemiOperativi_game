@@ -71,3 +71,88 @@ void *connection_thread(void *params_ptr){
     pthread_exit(NULL);
 }
 
+void* updater_thread(void* params_ptr){
+
+    params* p_args = (params*)params_ptr;
+
+    // ogni volta che il server riceve un update da un client, salva l'indirizzo del client per inviargli altri update
+	int client_socket = p_args->player_socket; 					 // socket usato per ricevere gli update di un client
+    addressListHead* listaClientAddr = p_args->player_addresses; // lista di tutti gli indirizzi dei client
+	World* world = p_args->environment;
+
+    int res;
+    char array[1000000];	// array usato per memorizzare i messaggi ricevuti dal client
+
+    while(1){
+        // server riceve i messaggi di update dal client
+        struct sockaddr clientAddr;
+        socklen_t len = sizeof(clientAddr);
+        res = recvfrom(client_socket, array, 1000000, 0, &clientAddr, &len);
+        if(res<0){
+            perror("[Server] Errore nella ricezione del messaggio UDP");
+            exit(EXIT_FAILURE);
+        }
+		// deserializza il messaggio ricevuto dal client
+        VehicleUpdatePacket* mexClient = (VehicleUpdatePacket*)Packet_deserialize(array, res);
+		// inserisce l'indirizzo del client nella lista degli indirizzi dei client (se non era già presente)
+		if(getAddress(listaClientAddr, clientAddr)==NULL){
+            insertAddress(listaClientAddr, clientAddr);
+		}
+        // aggiorno la posizione del veicolo
+        int id = mexClient->id;
+        Vehicle* v = World_getVehicle(world, id);
+        v->rotational_force_update = mexClient->rotational_force;
+        v->translational_force_update = mexClient->translational_force;
+        World_update(world);
+    }
+}
+
+void* player_updater_thread(void* params_ptr){
+
+    params* p_args = (params*)params_ptr;
+
+    int client_socket = p_args->player_socket;
+    addressListHead* listaClientAddr = p_args->player_addresses;
+	World* world = p_args->environment;
+
+    while(1) {
+        // server invia update a tutti i client -> serve WorldUpdatePacket
+        WorldUpdatePacket* mexWorldUpdate = (WorldUpdatePacket*)malloc(sizeof(WorldUpdatePacket));
+        PacketHeader header;
+        header.type = WorldUpdate;
+        mexWorldUpdate->header = header;
+        mexWorldUpdate->num_vehicles = world->vehicles.size;
+
+        ClientUpdate* clientUpdate = (ClientUpdate*)malloc(mexWorldUpdate->num_vehicles*sizeof(ClientUpdate));
+
+		// aggiorno i vari client
+        ListItem* vehicle = world->vehicles.first;
+        int i = 0;
+        while(vehicle!=NULL){
+            Vehicle* v = (Vehicle*)vehicle;
+            clientUpdate[i].id = v->id;
+            clientUpdate[i].x = v->x;
+            clientUpdate[i].y = v->y;
+            clientUpdate[i].theta = v->theta;
+            i++;
+            vehicle = vehicle->next;
+        }
+        mexWorldUpdate->updates = clientUpdate;
+
+		// invia messaggio di update ai vari client connessi
+        addressListItem* client = listaClientAddr->first;
+        char array[1000000];	// array usato per memorizzare i messaggi ricevuti dal client
+        int bytes = Packet_serialize(array, &(mexWorldUpdate->header));
+        while(client!=NULL){
+            struct sockaddr clientAddr = client->address;
+            int res = sendto(client_socket, array, bytes, 0, &clientAddr, sizeof(clientAddr));
+            if(res<0){
+                perror("[Server] Errore nell'invio del messaggio UDP");
+                exit(EXIT_FAILURE);
+            }
+            client = client->next;
+        }
+
+        usleep(50000); // per essere sincronizzato
+    }
+}

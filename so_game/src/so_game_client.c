@@ -20,12 +20,16 @@
 #include "so_game_protocol.h"
 #include "TCP_interface.h"
 #include "messages.h"
+#include "client_update_functions.h"
 
+pthread_t updater_thread;		// update receiver
+pthread_t update_sender_thread;		// update sender
 ImagePacket* surface_mesh_response;
 ImagePacket* surfaceTexture_packet;
-int sock; 			// TCP socket per la connessione
-World environment;		// world
-Vehicle* player_vehicle;	// veicolo
+int sock; 			// TCP socket
+World environment;		// environment
+Vehicle* player_vehicle;	// The vehicle
+int socket_UDP;		// UDP socket
 
 void client_shutdown(int s) {
 	if(s==SIGINT){
@@ -44,6 +48,8 @@ void client_shutdown(int s) {
 	// chiudo il socket
 	int res = close(sock);
 	/* error check */ if(res < 0) { printf("\nTCP socket failed closing"); exit(EXIT_FAILURE); }
+	res = close(socket_UDP);
+	/* error check */ if(res < 0) { printf("\nUDP socket failed closing"); exit(EXIT_FAILURE); }
 	printf("\nsockets closed\n");
 
 	// libero la memoria
@@ -52,6 +58,18 @@ void client_shutdown(int s) {
 	Vehicle_destroy(player_vehicle);
 	printf("\nengine memory released\n");
 
+	// terminating updaters
+	res = pthread_cancel(updater_thread);
+	if(res!=0){
+		perror("Errore nella terminazione dell'updater_thread");
+		exit(EXIT_FAILURE);
+	}
+	res = pthread_cancel(update_sender_thread);
+	if(res!=0){
+		perror("Errore nella terminazione dell'update_sender_thread");
+		exit(EXIT_FAILURE);
+	}
+	printf("\nupdaters terminated\n");
 }
 
 int main(int argc, char **argv) {
@@ -185,7 +203,39 @@ int main(int argc, char **argv) {
   	// when the server notifies a new player has joined the game
   	// request the texture and add the player to the pool
 
-	// lancio l'engine
+	// creo socket UDP
+	socket_UDP = socket(AF_INET, SOCK_DGRAM, 0);
+	struct sockaddr_in address_UDP={
+		.sin_family = AF_INET,
+		.sin_port = htons(2001),
+		.sin_addr.s_addr = inet_addr(server_address)
+	};
+
+	// inizializzo i parametri da passare alle funzioni dei thread
+	// serve ??? int thread_state = 1;
+	client_thread runner_args={
+		.ID_v = my_id,
+		.socket_TCP = sock,
+		.socket_UDP = socket_UDP,
+		.address_UDP = &address_UDP,
+		.vehicle = player_vehicle,
+		.world = &environment,
+		.image = vehicle_image
+	};
+
+	// creo i thread per ricevere e inviare gli update
+	res = pthread_create(&updater_thread, NULL, updateReceiver, &runner_args);
+	if(res!=0){
+		perror("Errore creazione updater_thread");
+		exit(EXIT_FAILURE);
+	}
+	res = pthread_create(&update_sender_thread, NULL, updateSender, &runner_args);
+	if(res!=0){
+		perror("Errore creazione update_sender_thread");
+		exit(EXIT_FAILURE);
+	}
+
+	// launching the engine
 	WorldViewer_runGlobal(&environment, player_vehicle, &argc, argv);
 
 }

@@ -21,6 +21,7 @@
 #include "so_game_protocol.h"
 #include "TCP_interface.h"
 #include "linked_list.h"
+#include "address_list.h"
 #include "messages.h"
 
 // parameters used to set up server threads
@@ -30,7 +31,11 @@ typedef struct params {
     int player_socket;      // socket used to communicate with the player
     Image* map_elevation;   // image used to produce the surface mesh
     Image* terrain_img;     // image used as surface texture
+    addressListHead* player_addresses;
 } params;
 
 void *connection_thread(void* params_ptr);      // thread used for connection via TCP
 
+void *updater_thread(void* params_ptr);    // thread used for updater via UDP
+
+void *player_updater_thread(void* params_ptr);

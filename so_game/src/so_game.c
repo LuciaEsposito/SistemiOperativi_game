@@ -27,7 +27,7 @@ void* updater_thread(void* args_){
   UpdaterArgs* args=(UpdaterArgs*)args_;
   while(args->run){
     World_update(args->world);
-    usleep(30000);
+    usleep(50000);
   }
   return 0;
 }
