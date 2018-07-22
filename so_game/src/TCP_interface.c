@@ -25,12 +25,12 @@ void sendTCP(int TCP_socket, PacketHeader* packet){
 
     // invio lunghezza
     int bytes = send(TCP_socket, length, sizeof(long int), 0);
-    /* error check */ if(bytes < 0) { perror("\nTCP socket message sending failure: "); exit(EXIT_FAILURE); }
+    /* error check */ if(bytes < 0) { perror("\nTCP socket message sending failure"); exit(EXIT_FAILURE); }
 
     // invio messaggio
     while((bytes = send(TCP_socket, message, len, 0)) < 0){
         if(errno == EINTR) continue;
-        /* error check */ if(bytes < 0) { perror("\nTCP socket message sending failure: "); exit(EXIT_FAILURE); }
+        /* error check */ if(bytes < 0) { perror("\nTCP socket message sending failure"); exit(EXIT_FAILURE); }
     }
 
 	free(message);
@@ -42,9 +42,9 @@ void sendTCP(int TCP_socket, PacketHeader* packet){
 int receiveTCP(int TCP_socket, char* msg){
 
     //  ricevo la lunghezza del messaggio
-    char length_message = (char*)malloc(sizeof(char)*1000000);
+    char* length_message = (char*)malloc(sizeof(char)*1000000);
     int bytes = recv(TCP_socket, length_message, sizeof(long int), 0);
-    /* error check */ if(bytes < 0) { perror("\nTCP socket message reception failure: "); exit(EXIT_FAILURE); }
+    /* error check */ if(bytes < 0) { perror("\nTCP socket message reception failure"); exit(EXIT_FAILURE); }
     int to_receive = atoi(length_message);      // lunghezza del messaggio (atoi: str -> int)
 
     // ricevo il messaggio "vero"

@@ -22,7 +22,7 @@ void* connection_thread(void* params_ptr){
 
         // uso la funzione in TCP_interface.c per ricevere dati
         int len = receiveTCP(connection_socket, data);
-        /* error check */ if(len < 0) { perror("\nTCP message reception faiure: "); exit(EXIT_FAILURE); }
+        /* error check */ if(len < 0) { perror("\nTCP message reception faiure"); exit(EXIT_FAILURE); }
         else if(len == 0) break; // la receive restituisce 0 quindi il client si è diconnesso, esco dal ciclo
 
         else {

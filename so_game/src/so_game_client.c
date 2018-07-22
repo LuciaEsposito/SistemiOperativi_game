@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 
 	// creo socket TCP
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-	/* error check */ if(sock < 0) { perror("\nTCP socket initialization failure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(sock < 0) { perror("\nTCP socket initialization failure"); exit(EXIT_FAILURE); }
 	// imposto i parametri per la connessione TCP
 	struct sockaddr_in address = {0};
 	address.sin_port        = htons(2000);
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 
 	// apro connessione con il socket del server (indirizzo in address)
 	int res = connect(sock, (struct sockaddr*) &address, sizeof(struct sockaddr_in));
-	/* error check */ if(res < 0) { perror("\nTCP connection initialization falure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(res < 0) { perror("\nTCP connection initialization falure"); exit(EXIT_FAILURE); }
 
 	// 1. Requesting an ID
 	char* id_response_contents = (char*)calloc(1500000, sizeof(char));	// buffer per memorizzare l'ID ricevuto
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 	Packet_free(&id_request->header);
 	// analizzo la risposta
 	int len = receiveTCP(sock , id_response_contents);
-	/* error check */ if (len < 0) { perror("\nTCP reception failure in ID request: "); exit(EXIT_FAILURE); }
+	/* error check */ if (len < 0) { perror("\nTCP reception failure in ID request"); exit(EXIT_FAILURE); }
 	IdPacket* id_response = (IdPacket*)Packet_deserialize(id_response_contents, len);	// str -> struct
 	int my_id = id_response->id;
 	Packet_free(&id_response->header);
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 	char* vehicle_texture_data = (char*)calloc(1500000, sizeof(char));
 	if(argc == 3){		// se ci sono 3 argomenti allora la texture del giocatore va prelevata del pc e inviata
 		vehicle_image = Image_load(argv[2]);		// recupera il file
-		/* error check */ if(vehicle_image == 0) perror("\nImage load error: ");
+		/* error check */ if(vehicle_image == 0) perror("\nImage load error");
 		ImagePacket* vehicle_texture_response = CreateVehicleTexturePacket(vehicle_image, my_id);// inserisco nel pacchetto
 		sendTCP(sock, &vehicle_texture_response->header);	// invio
 	} else {		// non c'è un terzo argomento quindi chiedo al server la texture di default per i veicoli
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 		// pacchetto per la richiesta di texture
 		sendTCP(sock, &vehicle_texture_request->header);
 		int len = receiveTCP(sock, vehicle_texture_data);
-		/* error check */ if (len < 0) { perror("\nTCP reception failure in veichle texture request: "); exit(EXIT_FAILURE); }
+		/* error check */ if (len < 0) { perror("\nTCP reception failure in veichle texture request"); exit(EXIT_FAILURE); }
 		Packet_free(&vehicle_texture_request->header);
 		ImagePacket* vehicleTexture_response = (ImagePacket*)Packet_deserialize(vehicle_texture_data, len);
 		// se l'ID è 0 allora il pacchetto immagine è riferito alla mappa
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 			vehicle_image = vehicleTexture_response->image;
 		}
 		else {
-			perror("\nImage corrupted: ");
+			perror("\nImage corrupted");
 			exit(EXIT_FAILURE);
 		}
 		free(vehicle_texture_data);
@@ -159,14 +159,14 @@ int main(int argc, char **argv) {
 	ImagePacket* surface_mesh_request = CreateElevationMapRequestPacket();	// pacchetto di richiesta
 	sendTCP(sock, &surface_mesh_request->header);		//invio
 	len = receiveTCP(sock, sm_data);		// recezione risposta
-	/* error check */ if (len < 0) { perror("\nTCP reception failure in elevation map request: "); exit(EXIT_FAILURE); }
+	/* error check */ if (len < 0) { perror("\nTCP reception failure in elevation map request"); exit(EXIT_FAILURE); }
 	Packet_free(&surface_mesh_request->header);
 	surface_mesh_response = (ImagePacket*)Packet_deserialize(sm_data, len);	// str -> struct
 	if( (surface_mesh_response->header).type == PostElevation && surface_mesh_response->id == 0) {
 		surface_mesh = surface_mesh_response->image;		// inserisco nella variabile
 	}
 	else {
-		perror("\nImage corrupted: ");
+		perror("\nImage corrupted");
 		exit(EXIT_FAILURE);
 	}
 	free(sm_data);
@@ -177,14 +177,14 @@ int main(int argc, char **argv) {
 	ImagePacket* surfaceTexture_request_packet = CreateSurfaceTextureRequestPacket();
     sendTCP(sock, &surfaceTexture_request_packet->header);
     len = receiveTCP(sock, st_data);
-	/* error check */ if (len < 0) { perror("\nTCP reception failure in surface texture request: "); exit(EXIT_FAILURE); }
+	/* error check */ if (len < 0) { perror("\nTCP reception failure in surface texture request"); exit(EXIT_FAILURE); }
     Packet_free(&surfaceTexture_request_packet->header);
     surfaceTexture_packet = (ImagePacket*)Packet_deserialize(st_data, len);
 	if( surfaceTexture_packet->id == 0 && (surfaceTexture_packet->header).type == PostTexture) {
 		surface_image = surfaceTexture_packet->image;
 	}
 	else {
-		perror("Image corrupted: ");
+		perror("Image corrupted");
 		exit(EXIT_FAILURE);
 	}
 	free(st_data);

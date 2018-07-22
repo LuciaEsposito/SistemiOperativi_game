@@ -113,26 +113,26 @@ int main(int argc, char **argv) {
 
 	// preparo il socket
 	int TCP_socket = socket(AF_INET, SOCK_STREAM, 0);		// socket fd
-	/* error check */ if(TCP_socket < 0) { perror("\nTCP socket initialization failure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(TCP_socket < 0) { perror("\nTCP socket initialization failure"); exit(EXIT_FAILURE); }
     if (setsockopt(TCP_socket, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int)) < 0)
         error("setsockopt(SO_REUSEADDR) failed");       // configuro il socket per utilizzare lo stesso indirizzo
 	res = bind(TCP_socket, (struct sockaddr *)&TCP_address, sizeof(struct sockaddr_in)); // leggo socket e address
-	/* error check */ if(res < 0) { perror("\nTCP socket binding failure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(res < 0) { perror("\nTCP socket binding failure"); exit(EXIT_FAILURE); }
 
 	// avvio il socket per accettare connessioni (max 10)
 	res = listen(TCP_socket, 10);
-	/* error check */ if(res < 0) { perror("\nTCP socket listening failure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(res < 0) { perror("\nTCP socket listening failure"); exit(EXIT_FAILURE); }
 
     // carico le immagini dagli uri sulla riga di comando
     char* v_t_uri=argv[1];      // vehicle texture URI
     char* s_e_uri=argv[2];      // surface elevation URI
     char* s_t_uri=argv[3];      // surface texture URI
 	elevation = Image_load(s_e_uri);
-	/* error check */ if(elevation == 0) { perror("\nSurface mesh loading error: "); exit(EXIT_FAILURE); }
+	/* error check */ if(elevation == 0) { perror("\nSurface mesh loading error"); exit(EXIT_FAILURE); }
 	terrain_img = Image_load(s_t_uri);
-	/* error check */ if(terrain_img == 0) { perror("\nSurface texture loading error: "); exit(EXIT_FAILURE); }
+	/* error check */ if(terrain_img == 0) { perror("\nSurface texture loading error"); exit(EXIT_FAILURE); }
 	player_img = Image_load(v_t_uri);
-	/* error check */ if(player_img == 0) { perror("\nVehicle texture loading error: "); exit(EXIT_FAILURE); }
+	/* error check */ if(player_img == 0) { perror("\nVehicle texture loading error"); exit(EXIT_FAILURE); }
 
 	// lancio l'engine
 	World_init(&environment, elevation, terrain_img, 0.5, 0.5, 0.5);
@@ -150,9 +150,9 @@ int main(int argc, char **argv) {
 	updater_params->environment = &environment;
 	updater_params->player_addresses = &player_addresses;
 	res = pthread_create(&updater, NULL, updater_thread, (void*)updater_params);
-	/* error check */ if(res != 0) { perror("\nserver updater thread launch failure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(res != 0) { perror("\nserver updater thread launch failure"); exit(EXIT_FAILURE); }
 	res = pthread_create(&players_updater, NULL, player_updater_thread, (void*)updater_params);
-	/* error check */ if(res != 0) { perror("\nplayers updater thread launch failure: "); exit(EXIT_FAILURE); }
+	/* error check */ if(res != 0) { perror("\nplayers updater thread launch failure"); exit(EXIT_FAILURE); }
 	client_addr = calloc(1, sizeof(struct sockaddr_in));
 
 	printf("\nRunning server on port:2000\n");
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 		// accetto una nuova connessione al socket TCP principale e la inoltro al current socket
 		current_socket = accept(TCP_socket, (struct sockaddr*)client_addr, &address_length);
 		if (current_socket == -1 && errno == EINTR) continue; // controllo interruzioni
-		/* error check */ if(current_socket < 0) { perror("\nTCP socket opening failure: "); exit(EXIT_FAILURE); }
+		/* error check */ if(current_socket < 0) { perror("\nTCP socket opening failure"); exit(EXIT_FAILURE); }
 		insertSockFD(&sockets , current_socket);    // inserisco il nuovo socket nella lista sockets
 
 		// creo un nuovo veicolo e lo inserisco nell'engine
@@ -191,9 +191,9 @@ int main(int argc, char **argv) {
         // per gestire la connessione
         pthread_t connection_handler;
 		res = pthread_create(&connection_handler, NULL, connection_thread, (void*)ct_params);
-		/* error check */ if(res != 0) { perror("\nThread launch failure: "); exit(EXIT_FAILURE); }
+		/* error check */ if(res != 0) { perror("\nThread launch failure"); exit(EXIT_FAILURE); }
 		res = pthread_detach(connection_handler);
-		/* error check */ if(res != 0) { perror("\nThread detach failure: "); exit(EXIT_FAILURE); }
+		/* error check */ if(res != 0) { perror("\nThread detach failure"); exit(EXIT_FAILURE); }
 
 		current_ID = current_ID +1;
 	}
