@@ -12,6 +12,6 @@
 #include "so_game_protocol.h"
 #include "world.h"
 
-void sendTCP(int socket_desc, PacketHeader* packet);
+void sendTCP(int TCP_socket, PacketHeader* packet);
 
-int receiveTCP(int socket_desc , char* msg);
+int receiveTCP(int TCP_socket, char* msg);
